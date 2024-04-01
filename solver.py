@@ -5,9 +5,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
-from DBPN.model import DBPN, DBPNS, DBPNLL
+from model import DBPN
 from progress_bar import progress_bar
 
+from evaluate import calculate_ssim, psnr
 
 class DBPNTrainer(object):
     def __init__(self, config, training_loader, testing_loader):
@@ -62,17 +63,20 @@ class DBPNTrainer(object):
     def test(self):
         self.model.eval()
         avg_psnr = 0
+        avg_ssim = 0
 
         with torch.no_grad():
             for batch_num, (data, target) in enumerate(self.testing_loader):
                 data, target = data.to(self.device), target.to(self.device)
                 prediction = self.model(data)
-                mse = self.criterion(prediction, target)
-                psnr = 10 * log10(1 / mse.item())
-                avg_psnr += psnr
+                # mse = self.criterion(prediction, target)
+                test_psnr = psnr(target.cpu().detach().numpy(), prediction.cpu().detach().numpy())
+                test_ssim = calculate_ssim(target, prediction)
+                avg_psnr += test_psnr
+                avg_ssim += test_ssim
                 progress_bar(batch_num, len(self.testing_loader), 'PSNR: %.4f' % (avg_psnr / (batch_num + 1)))
 
-        print("    Average PSNR: {:.4f} dB".format(avg_psnr / len(self.testing_loader)))
+        print("Average PSNR: {:.4f} dB, Average SSIM: {:.4f} ".format(avg_psnr / len(self.testing_loader), avg_ssim / (len(self.testing_loader))))
 
     def run(self):
         self.build_model()
