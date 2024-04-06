@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from torch.utils.data import DataLoader
 from dataset.data import get_training_set, get_test_set
 from solver import DBPNTrainer
